@@ -1,0 +1,46 @@
+services:
+  # BEGIN FRONTOFFICE #
+  frontend:
+    # A frontend for our system
+    image: snap/frontend
+    build: ./frontend
+    restart: always
+    ports:
+      - 80:8080
+  # END FRONTOFFICE #
+
+
+  # BEGIN MIDDLEWARE #
+  json-server:
+    image: vimagick/json-server
+    command: -h 0.0.0.0 -p 3000 -w db.json
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./db:/data
+    restart: always'
+
+  # To allow access from anywhere, set up a cloudflare one tunnel
+  tunnel:
+    container_name: cloudflared-tunnel
+    image: cloudflare/cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=MYTOKENHERE
+
+  # BEGIN BACKOFFICE #
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Europe/Brussels
+    volumes:
+      - ./n8n_data:/home/node/.n8n
